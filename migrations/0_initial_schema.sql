@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS events (
     [id]               INTEGER PRIMARY KEY,
+    [deleted]          BOOLEAN NOT NULL DEFAULT 0,
     [discord_event_id] INTEGER UNIQUE,
     [name]             TEXT NOT NULL,
     [description]      TEXT,
