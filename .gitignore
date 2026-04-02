@@ -1,1 +1,16 @@
-/target
+# Build artifacts
+target/
+result/
+bin/
+obj/
+dist/
+
+# Secrets
+.env
+
+# Application Files
+*.sqlite
+*.db
+*.db-wal
+*.db-shm
+.discordcalendarbot*/
