@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, path::PathBuf};
 use dotenv::dotenv;
 use sqlx;
 
@@ -25,7 +25,7 @@ impl std::fmt::Display for BotError {
 // Define a struct to hold the global state of the bot
 struct CalendarBot {
     token: String,
-    state_directory: String,
+    state_directory: PathBuf,
     database: sqlx::SqlitePool,
 }
 
@@ -50,14 +50,20 @@ impl CalendarBot {
 
         // Get the State Directory
         let state_directory = match std::env::var(Self::STATE_DIRECTORY_ENV_VAR) {
-            Ok(dir) => dir,
-            Err(_) => Self::STATE_DIRECTORY_DEFAULT_VALUE.to_string(),
+            Ok(dir) => PathBuf::from(&dir),
+            Err(_) => PathBuf::from(Self::STATE_DIRECTORY_DEFAULT_VALUE),
+        };
+
+        // Canonicalize the state directory path
+        let state_directory = match state_directory.canonicalize() {
+            Ok(path) => path,
+            Err(e) => return Err(BotError::new(format!("Failed to get absolute path to state directory: {}", e))),
         };
 
         // Make sure the state directory exists
         match std::fs::create_dir_all(&state_directory) {
             // Directory created successfully
-            Ok(_) => println!("State directory created: {}", state_directory),
+            Ok(_) => println!("State directory created: {}", state_directory.display()),
 
             // Directory already exists, no action needed
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),

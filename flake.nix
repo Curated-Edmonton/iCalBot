@@ -15,7 +15,7 @@
         let
           runtimeDeps = with pkgs; [ openssl ];
           buildDeps = with pkgs; [ pkg-config rustPlatform.bindgenHook gcc ];
-          devDeps = with pkgs; [ git ];
+          devDeps = with pkgs; [ git sqlx-cli ];
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
           msrv = cargoToml.package.rust-version;
