@@ -135,4 +135,105 @@ impl EventHandler for CalendarBot {
 
         println!("{}/{} : {} --> {}", channel_name, msg.id, msg.author.name, msg.content);
     }
+
+    async fn guild_scheduled_event_create(&self, _ctx: Context, event: ScheduledEvent) {
+        println!("New Scheduled Event: {} (ID: {})", event.name, event.id);
+
+        // Figure out the duration of the event in seconds, if the end time is provided
+        let duration_seconds = match event.end_time {
+            Some(end_time) => {
+                let start_time = event.start_time;
+                end_time.timestamp() - start_time.timestamp()
+            },
+            None => 0, // If no end time is provided, we can treat it as a 0-second event or handle it differently based on your requirements
+        };
+
+        // Calculate details for the event
+        let event_id = event.id.get().to_string().to_owned();
+        let location = event.metadata.and_then(|meta| meta.location).to_owned();
+        let event_start = event.start_time.to_rfc3339().unwrap_or_else(|| Timestamp::now().to_rfc3339().unwrap());
+
+        match sqlx::query!(
+            r#"
+            INSERT INTO events (
+                discord_event_id,
+                name,
+                description,
+                location,
+                start_time,
+                duration_seconds,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            "#,
+            event_id,
+            event.name,
+            event.description,
+            location,
+            event_start,
+            duration_seconds,
+        ).execute(&self.database).await {
+            Ok(_) => println!("Event saved to database successfully."),
+            Err(e) => eprintln!("Failed to save event to database: {}", e),
+        }
+
+    }
+
+    async fn guild_scheduled_event_update(&self, _ctx: Context, event: ScheduledEvent) {
+        println!("Scheduled Event Updated: {} (ID: {})", event.name, event.id);
+
+        // Update the event in the database
+        let event_id = event.id.get().to_string();
+        let location = event.metadata.and_then(|meta| meta.location).to_owned();
+        let event_start = event.start_time.to_rfc3339().unwrap_or_else(|| Timestamp::now().to_rfc3339().unwrap());
+        let duration_seconds = match event.end_time {
+            Some(end_time) => {
+                let start_time = event.start_time;
+                end_time.timestamp() - start_time.timestamp()
+            },
+            // If no end time is provided, treat it as a 0-second event
+            None => 0,
+        };
+
+        match sqlx::query!(
+            r#"
+            UPDATE events
+            SET
+                name = ?,
+                description = ?,
+                location = ?,
+                start_time = ?,
+                duration_seconds = ?
+            WHERE discord_event_id = ?
+            "#,
+            event.name,
+            event.description,
+            location,
+            event_start,
+            duration_seconds,
+            event_id,
+        ).execute(&self.database).await {
+            Ok(_) => println!("Event updated in database successfully."),
+            Err(e) => eprintln!("Failed to update event in database: {}", e),
+        };
+
+    }
+
+    async fn guild_scheduled_event_delete(&self, _ctx: Context, event: ScheduledEvent) {
+        println!("Scheduled Event Deleted: {} (ID: {})", event.name, event.id);
+
+        // Mark the event as deleted in the database
+        let event_id = event.id.get().to_string();
+        match sqlx::query!(
+            r#"
+            UPDATE events
+            SET deleted = 1
+            WHERE discord_event_id = ?
+            "#,
+            event_id,
+        ).execute(&self.database).await {
+            Ok(_) => println!("Event marked as deleted in database successfully."),
+            Err(e) => eprintln!("Failed to mark event as deleted in database: {}", e),
+        };
+    }
 }
