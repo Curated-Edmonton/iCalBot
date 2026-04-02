@@ -1,12 +1,20 @@
-
-CREATE TABLE IF NOT EXISTS bot.events (
+CREATE TABLE IF NOT EXISTS events (
     [id]               INTEGER PRIMARY KEY,
     [discord_event_id] INTEGER UNIQUE,
     [name]             TEXT NOT NULL,
     [description]      TEXT,
-    [start_time]       TIMESTAMPTZ NOT NULL,
+    [start_time]       TEXT NOT NULL, -- stored as ISO 8601 string
     [duration_seconds] INTEGER NOT NULL,
     [location]         TEXT,
-    [created_at]       TIMESTAMPTZ DEFAULT NOW(),
-    [updated_at]       TIMESTAMPTZ DEFAULT NOW()
+    [created_at]       TEXT DEFAULT (CURRENT_TIMESTAMP),
+    [updated_at]       TEXT DEFAULT (CURRENT_TIMESTAMP)
 );
+
+CREATE TRIGGER IF NOT EXISTS events_updated_at
+AFTER UPDATE ON events
+FOR EACH ROW
+BEGIN
+  UPDATE events
+  SET updated_at = CURRENT_TIMESTAMP
+  WHERE id = OLD.id;
+END;
