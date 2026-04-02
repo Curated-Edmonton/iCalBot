@@ -1,7 +1,6 @@
 use std::error::Error;
 use dotenv::dotenv;
 use sqlx;
-use sqlx::SqlitePool;
 
 // Define a custom error type for the bot
 #[derive(Debug, Clone)]
@@ -27,15 +26,19 @@ impl std::fmt::Display for BotError {
 struct CalendarBot {
     token: String,
     state_directory: String,
-    database: SqlitePool,
+    database: sqlx::SqlitePool,
 }
 
 
 // And also act as a Type on which to implement Traits
 impl CalendarBot {
     const BOT_TOKEN_ENV_VAR: &str = "BOT_TOKEN";
+
     const STATE_DIRECTORY_ENV_VAR: &str = "BOT_STATE_DIRECTORY";
     const STATE_DIRECTORY_DEFAULT_VALUE: &str = "./discordcalendarbot";
+
+    const DB_CONNECTION_STRING_ENV_VAR: &str = "DATABASE_URL";
+    const DB_CONNECTION_STRING_DEFAULT_VALUE: &str = "sqlite:" + Self::STATE_DIRECTORY_DEFAULT_VALUE + "/db.sqlite";
 
     async fn new() -> Result<Self, BotError> {
         // Get the Bot Token
@@ -62,17 +65,28 @@ impl CalendarBot {
             Err(e) => return Err(BotError::new(format!("Failed to create state directory: {}", e))),
         }
 
-        // Connect to the database
-        let conn_str = format!("sqlite:{}", state_directory.clone() + "/calendar_bot.sqlite");
-        let database = match SqlitePool::connect(&conn_str).await {
+        // Get the Database Connection String
+        let conn_str = match std::env::var(Self::DB_CONNECTION_STRING_ENV_VAR) {
+            Ok(conn_str) => conn_str,
+            Err(_) => Self::DB_CONNECTION_STRING_DEFAULT_VALUE.to_string(),
+        };
+
+        // Setup Database Connection
+        let database = match sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(conn_str)
+                .create_if_missing(true),
+        ).await {
             Ok(pool) => pool,
-            Err(e) => return Err(BotError::new(format!("Failed to connect to the database: {}", e))),
+            Err(e) => return Err(BotError::new(format!("Failed to connect to database: {}", e))),
         };
 
         // Run Migrations
-        // if let Err(e) = sqlx::migrate!("./migrations").run(&database).await {
-        //     return Err(BotError::new(format!("Failed to run database migrations: {}", e))));
-        // }
+        if let Err(e) = sqlx::migrate!("migrations").run(&database).await {
+            return Err(BotError::new(format!("Failed to run database migrations: {}", e)));
+        }
 
         Ok(CalendarBot { token, state_directory, database })
     }
@@ -83,9 +97,7 @@ async fn main() {
     // Load environment variables from a .env file, if it exists
     dotenv().ok();
 
-    // Initialize the bot's state
+    // Create the bot instance
     let _bot = CalendarBot::new().await
         .expect("Failed to initialize the bot");
-
-    println!("Hello, world!");
 }
