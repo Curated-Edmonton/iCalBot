@@ -120,6 +120,10 @@ impl CalendarBot {
 
 #[async_trait]
 impl EventHandler for CalendarBot {
+    async fn ready(&self, _: Context, ready: Ready) {
+        println!("{} is connected and waiting for events!", ready.user.name);
+    }
+
     async fn message(&self, ctx: Context, msg: Message) {
         let channel_name = match msg.channel(&ctx).await {
             Ok(channel) => match channel.guild() {
