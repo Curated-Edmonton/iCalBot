@@ -37,8 +37,9 @@ impl CalendarBot {
     const STATE_DIRECTORY_ENV_VAR: &str = "BOT_STATE_DIRECTORY";
     const STATE_DIRECTORY_DEFAULT_VALUE: &str = "./discordcalendarbot";
 
+    // Default to in memory database if no connection string is provided
     const DB_CONNECTION_STRING_ENV_VAR: &str = "DATABASE_URL";
-    const DB_CONNECTION_STRING_DEFAULT_VALUE: &str = "sqlite:" + Self::STATE_DIRECTORY_DEFAULT_VALUE + "/db.sqlite";
+    const DB_CONNECTION_STRING_DEFAULT_VALUE: &str = "sqlite::memory:";
 
     async fn new() -> Result<Self, BotError> {
         // Get the Bot Token
