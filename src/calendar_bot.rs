@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use chrono::SecondsFormat;
 use serenity::async_trait;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
@@ -118,6 +119,62 @@ impl CalendarBot {
 }
 
 
+pub fn format_timestamp(timestamp: &Timestamp) -> String {
+    timestamp.to_rfc3339_opts(SecondsFormat::Secs, false)
+}
+
+#[derive(Debug, Clone)]
+pub struct EventDetails {
+    _event: ScheduledEvent,
+}
+
+impl From<ScheduledEvent> for EventDetails {
+    fn from(event: ScheduledEvent) -> EventDetails {
+        EventDetails::new(event)
+    }
+}
+
+impl EventDetails {
+    pub fn new(event: ScheduledEvent) -> Self {
+        Self { _event: event }
+    }
+
+    pub fn event_id(&self) -> String {
+        self._event.id.get().to_string()
+    }
+
+    fn name(&self) -> String {
+        self._event.name.clone()
+    }
+
+    fn description(&self) -> Option<String> {
+        self._event.description.clone()
+    }
+
+    fn location(&self) -> Option<String> {
+        self._event.metadata.clone().and_then(|meta| meta.location.clone())
+    }
+
+    fn start_time(&self) -> String {
+        format_timestamp(&self._event.start_time)
+    }
+
+    fn end_time(&self) -> Option<String> {
+        self._event.end_time.map(|end_time| format_timestamp(&end_time))
+    }
+
+    fn duration_seconds(&self) -> i64 {
+        match self._event.end_time {
+            Some(end_time) => {
+                end_time.timestamp() - self._event.start_time.timestamp()
+            },
+            // If no end time is provided, treat it as a 0-second event
+            None => 0,
+        }
+    }
+}
+
+
 #[async_trait]
 impl EventHandler for CalendarBot {
     async fn ready(&self, _: Context, ready: Ready) {
@@ -138,20 +195,7 @@ impl EventHandler for CalendarBot {
 
     async fn guild_scheduled_event_create(&self, _ctx: Context, event: ScheduledEvent) {
         println!("New Scheduled Event: {} (ID: {})", event.name, event.id);
-
-        // Figure out the duration of the event in seconds, if the end time is provided
-        let duration_seconds = match event.end_time {
-            Some(end_time) => {
-                let start_time = event.start_time;
-                end_time.timestamp() - start_time.timestamp()
-            },
-            None => 0, // If no end time is provided, we can treat it as a 0-second event or handle it differently based on your requirements
-        };
-
-        // Calculate details for the event
-        let event_id = event.id.get().to_string().to_owned();
-        let location = event.metadata.and_then(|meta| meta.location).to_owned();
-        let event_start = event.start_time.to_rfc3339().unwrap_or_else(|| Timestamp::now().to_rfc3339().unwrap());
+        let event_details = EventDetails::from(event);
 
         match sqlx::query!(
             r#"
@@ -166,16 +210,16 @@ impl EventHandler for CalendarBot {
             )
             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#,
-            event_id,
-            event.name,
-            event.description,
-            location,
-            event_start,
-            duration_seconds,
+            event_details.event_id(),
+            event_details.name(),
+            event_details.description(),
+            event_details.location(),
+            event_details.start_time(),
+            event_details.duration_seconds(),
         ).execute(&self.database).await {
-            Ok(_) => println!("Event saved to database successfully."),
-            Err(e) => eprintln!("Failed to save event to database: {}", e),
-        }
+            Ok(_) => println!("Event inserted into database successfully."),
+            Err(e) => eprintln!("Failed to insert event into database: {}", e),
+        };
 
     }
 
