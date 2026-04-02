@@ -27,11 +27,7 @@ impl CalendarBot {
     const STATE_DIRECTORY_ENV_VAR: &str = "BOT_STATE_DIRECTORY";
     const STATE_DIRECTORY_DEFAULT_VALUE: &str = ".discordcalendarbot";
 
-    const INTENTS: [GatewayIntents; 3] = [
-        GatewayIntents::GUILD_MESSAGES,
-        GatewayIntents::DIRECT_MESSAGES,
-        GatewayIntents::MESSAGE_CONTENT
-    ];
+    const INTENTS: [GatewayIntents; 1] = [GatewayIntents::GUILD_SCHEDULED_EVENTS];
 
     // Initialize the bot
     pub async fn new() -> Result<Self, BotError> {
