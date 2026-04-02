@@ -1,38 +1,65 @@
 {
-  description = "A Bot to Bridge Discord Events with Calendars";
-
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs =
-    { self, nixpkgs }:
-    let
-      system = "x86_64-linux";
-    in
-    {
-      devShells."${system}".default =
+  # Based on this amazing article:
+  # https://log.woodweb.ca/articles/rust-flake/
+
+  outputs = inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [ "x86_64-linux" ];
+      perSystem = { config, self', pkgs, lib, system, ... }:
         let
-          pkgs = import nixpkgs { inherit system; };
+          runtimeDeps = with pkgs; [ openssl ];
+          buildDeps = with pkgs; [ pkg-config rustPlatform.bindgenHook gcc ];
+          devDeps = with pkgs; [ git code neovim ];
+
+          cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+          msrv = cargoToml.package.rust-version;
+
+          rustPackage = features:
+            (pkgs.makeRustPlatform {
+              cargo = pkgs.rust-bin.stable.latest.minimal;
+              rustc = pkgs.rust-bin.stable.latest.minimal;
+            }).buildRustPackage {
+              inherit (cargoToml.package) name version;
+              src = ./.;
+              cargoLock.lockFile = ./Cargo.lock;
+              buildFeatures = features;
+              buildInputs = runtimeDeps;
+              nativeBuildInputs = buildDeps;
+              # Uncomment if your cargo tests require networking or otherwise
+              # don't play nicely with the Nix build sandbox:
+              # doCheck = false;
+            };
+
+          mkDevShell = rustc:
+            pkgs.mkShell {
+              shellHook = ''
+                export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
+              '';
+              buildInputs = runtimeDeps;
+              nativeBuildInputs = buildDeps ++ devDeps ++ [ rustc ];
+            };
         in
-        pkgs.mkShell {
-          packages = with pkgs; [
-            # General development tools
-            git
+        {
+          _module.args.pkgs = import inputs.nixpkgs {
+            inherit system;
+            overlays = [ (import inputs.rust-overlay) ];
+          };
 
-            # Rust App Build Dependencies
-            gcc
-            pkg-config
-            openssl
+          packages.default = self'.packages.discordcalendarbot;
+          devShells.default = self'.devShells.nightly;
 
-            # Rust Dev Tools
-            cargo
-            rustc
-          ];
+          packages.discordcalendarbot = (rustPackage "");
 
-          shellHook = ''
-            echo 'Ready...';
-          '';
+          devShells.nightly = (mkDevShell (pkgs.rust-bin.selectLatestNightlyWith
+            (toolchain: toolchain.default)));
+          devShells.stable = (mkDevShell pkgs.rust-bin.stable.latest.default);
+          devShells.msrv = (mkDevShell pkgs.rust-bin.stable.${msrv}.default);
         };
     };
 }
