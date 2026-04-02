@@ -9,8 +9,8 @@ dist/
 .env
 
 # Application Files
-*.sqlite
 *.db
-*.db-wal
-*.db-shm
+*.sqlite
+*.*-wal
+*.*-shm
 .discordcalendarbot*/

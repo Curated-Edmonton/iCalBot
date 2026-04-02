@@ -54,12 +54,6 @@ impl CalendarBot {
             Err(_) => PathBuf::from(Self::STATE_DIRECTORY_DEFAULT_VALUE),
         };
 
-        // Canonicalize the state directory path
-        let state_directory = match state_directory.canonicalize() {
-            Ok(path) => path,
-            Err(e) => return Err(BotError::new(format!("Failed to get absolute path to state directory: {}", e))),
-        };
-
         // Make sure the state directory exists
         match std::fs::create_dir_all(&state_directory) {
             // Directory created successfully
@@ -71,6 +65,12 @@ impl CalendarBot {
             // All Other errors
             Err(e) => return Err(BotError::new(format!("Failed to create state directory: {}", e))),
         }
+
+        // Canonicalize the state directory path
+        let state_directory = match state_directory.canonicalize() {
+            Ok(path) => path,
+            Err(e) => return Err(BotError::new(format!("Failed to get absolute path to state directory: {}", e))),
+        };
 
         // Get the Database Connection String
         let conn_str = match std::env::var(Self::DB_CONNECTION_STRING_ENV_VAR) {
@@ -91,7 +91,7 @@ impl CalendarBot {
         };
 
         // Run Migrations
-        if let Err(e) = sqlx::migrate!("migrations").run(&database).await {
+        if let Err(e) = sqlx::migrate!().run(&database).await {
             return Err(BotError::new(format!("Failed to run database migrations: {}", e)));
         }
 
