@@ -35,7 +35,7 @@ impl CalendarBot {
     const BOT_TOKEN_ENV_VAR: &str = "BOT_TOKEN";
 
     const STATE_DIRECTORY_ENV_VAR: &str = "BOT_STATE_DIRECTORY";
-    const STATE_DIRECTORY_DEFAULT_VALUE: &str = "./discordcalendarbot";
+    const STATE_DIRECTORY_DEFAULT_VALUE: &str = ".discordcalendarbot";
 
     // Default to in memory database if no connection string is provided
     const DB_CONNECTION_STRING_ENV_VAR: &str = "DATABASE_URL";
