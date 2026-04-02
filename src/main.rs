@@ -10,6 +10,12 @@ async fn main() {
     dotenv().ok();
 
     // Create the bot instance
-    let _bot = CalendarBot::new().await
+    let bot = CalendarBot::new().await
         .expect("Failed to initialize the bot");
+
+    // Start the bot
+    bot.run().await
+        .expect("The bot encountered an error while running");
+
+    println!("Bot has stopped running.");
 }

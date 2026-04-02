@@ -1,13 +1,19 @@
 use std::path::PathBuf;
+
+use serenity::async_trait;
+use serenity::model::prelude::*;
+use serenity::prelude::*;
 use sqlx;
+
 use crate::bot_error::BotError;
+
 
 // Define a struct to hold the global state of the bot
 pub struct CalendarBot {
-    token: String,
-    state_directory: PathBuf,
-    database_url: String,
-    database: sqlx::SqlitePool,
+    pub token: String,
+    pub state_directory: PathBuf,
+    pub database_url: String,
+    pub database: sqlx::SqlitePool,
 }
 
 
@@ -21,6 +27,13 @@ impl CalendarBot {
     const STATE_DIRECTORY_ENV_VAR: &str = "BOT_STATE_DIRECTORY";
     const STATE_DIRECTORY_DEFAULT_VALUE: &str = ".discordcalendarbot";
 
+    const INTENTS: [GatewayIntents; 3] = [
+        GatewayIntents::GUILD_MESSAGES,
+        GatewayIntents::DIRECT_MESSAGES,
+        GatewayIntents::MESSAGE_CONTENT
+    ];
+
+    // Initialize the bot
     pub async fn new() -> Result<Self, BotError> {
         // Get the Bot Token
         let token = match std::env::var(Self::BOT_TOKEN_ENV_VAR) {
@@ -84,5 +97,42 @@ impl CalendarBot {
         }
 
         Ok(CalendarBot { token, state_directory, database_url, database })
+    }
+
+    // Run the bot, this will block until the bot is stopped
+    pub async fn run(self) -> Result<(), BotError> {
+        // Combine the intents into a single GatewayIntents value
+        let mut intents = GatewayIntents::empty();
+        for intent in Self::INTENTS {
+            intents |= intent;
+        }
+
+        // Create the Serenity client
+        let mut client = match serenity::Client::builder(&self.token, intents).event_handler(self).await {
+            Ok(client) => client,
+            Err(e) => return Err(BotError::new(format!("Err creating client: {}", e))),
+        };
+
+        // Start the client, this will block until the bot is stopped
+        if let Err(e) = client.start().await {
+            return Err(BotError::new(format!("Failed to start the bot: {}", e)));
+        }
+        Ok(())
+    }
+}
+
+
+#[async_trait]
+impl EventHandler for CalendarBot {
+    async fn message(&self, ctx: Context, msg: Message) {
+        let channel_name = match msg.channel(&ctx).await {
+            Ok(channel) => match channel.guild() {
+                Some(guild_channel) => format!("{}#{}", guild_channel.guild_id, guild_channel.name),
+                None => "DM".to_string(),
+            },
+            Err(_) => msg.channel_id.to_string(),
+        };
+
+        println!("{}/{} : {} --> {}", channel_name, msg.id, msg.author.name, msg.content);
     }
 }
