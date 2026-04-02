@@ -20,6 +20,11 @@
             # General development tools
             git
 
+            # Rust App Build Dependencies
+            gcc
+            pkg-config
+            openssl
+
             # Rust Dev Tools
             cargo
             rustc
