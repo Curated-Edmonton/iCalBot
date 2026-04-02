@@ -26,6 +26,7 @@ impl std::fmt::Display for BotError {
 struct CalendarBot {
     token: String,
     state_directory: PathBuf,
+    database_url: String,
     database: sqlx::SqlitePool,
 }
 
@@ -34,12 +35,11 @@ struct CalendarBot {
 impl CalendarBot {
     const BOT_TOKEN_ENV_VAR: &str = "BOT_TOKEN";
 
+    // Either a file path to a SQLite database or a full connection string starting with "sqlite:"
+    const DB_CONNECTION_STRING_ENV_VAR: &str = "DATABASE_URL";
+
     const STATE_DIRECTORY_ENV_VAR: &str = "BOT_STATE_DIRECTORY";
     const STATE_DIRECTORY_DEFAULT_VALUE: &str = ".discordcalendarbot";
-
-    // Default to in memory database if no connection string is provided
-    const DB_CONNECTION_STRING_ENV_VAR: &str = "DATABASE_URL";
-    const DB_CONNECTION_STRING_DEFAULT_VALUE: &str = "sqlite::memory:";
 
     async fn new() -> Result<Self, BotError> {
         // Get the Bot Token
@@ -72,20 +72,28 @@ impl CalendarBot {
             Err(e) => return Err(BotError::new(format!("Failed to get absolute path to state directory: {}", e))),
         };
 
-        // Get the Database Connection String
-        let conn_str = match std::env::var(Self::DB_CONNECTION_STRING_ENV_VAR) {
-            Ok(conn_str) => conn_str,
-            Err(_) => Self::DB_CONNECTION_STRING_DEFAULT_VALUE.to_string(),
+        // Get the Database Connection String, and configure the database options accordingly
+        let mut database_options = sqlx::sqlite::SqliteConnectOptions::new().create_if_missing(true);
+        let database_url = match std::env::var(Self::DB_CONNECTION_STRING_ENV_VAR) {
+            Ok(url) => match url.strip_prefix("sqlite:") {
+                Some(path) => {
+                    // If the URL starts with "sqlite:", we strip off the prefix and use the remaining part as the file path
+                    database_options = database_options.filename(path);
+                    url
+                },
+                None => {
+                    // If the URL does not start with "sqlite:", take it directly as the file path and prepend "sqlite:" to it
+                    database_options = database_options.filename(url.clone());
+                    format!("sqlite:{}", url)
+                },
+            },
+            Err(e) => {
+                return Err(BotError::new(format!("Environment variable {} is not set: {}", Self::DB_CONNECTION_STRING_ENV_VAR, e)));
+            },
         };
 
-        // Setup Database Connection
-        let database = match sqlx::sqlite::SqlitePoolOptions::new()
-            .max_connections(5)
-            .connect_with(
-            sqlx::sqlite::SqliteConnectOptions::new()
-                .filename(conn_str)
-                .create_if_missing(true),
-        ).await {
+        // Create a connection pool to the SQLite database using the configured options
+        let database = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(database_options).await {
             Ok(pool) => pool,
             Err(e) => return Err(BotError::new(format!("Failed to connect to database: {}", e))),
         };
@@ -95,7 +103,7 @@ impl CalendarBot {
             return Err(BotError::new(format!("Failed to run database migrations: {}", e)));
         }
 
-        Ok(CalendarBot { token, state_directory, database })
+        Ok(CalendarBot { token, state_directory, database_url, database })
     }
 }
 
