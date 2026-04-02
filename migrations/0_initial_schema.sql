@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS events (
     [id]               INTEGER PRIMARY KEY,
     [deleted]          BOOLEAN NOT NULL DEFAULT 0,
-    [discord_event_id] INTEGER UNIQUE,
+    [discord_event_id] TEXT UNIQUE, -- Discord's event ID, stored as a string to accommodate u64 values
     [name]             TEXT NOT NULL,
     [description]      TEXT,
     [start_time]       TEXT NOT NULL, -- stored as ISO 8601 string
