@@ -1,0 +1,152 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:A Curated Edmonton
+X-WR-TIMEZONE:America/Edmonton
+
+
+BEGIN:VEVENT
+DTSTART:20260331T000000Z
+DTEND:20260331T020000Z
+DTSTAMP:20260404T181110Z
+UID:gr4moq3650jha1egl14s795t5c@google.com
+CREATED:20260324T143013Z
+DESCRIPTION:Be there early for discussion and maybe snacks. Doors open at 5
+ :30.<br><br>We will journey together using a symphony of sacred instruments
+ \, including but not limited to crystal singing bowls\, a small gong\, drum
+ s\, and chimes. We will start with some movement then move into mantras and
+  breath then everyone settles in to experience the instruments. These tools
+  create a powerful\, immersive soundscape that helps to detoxify the system
+  of excess energy\, stress\, and mental chatter. If you sometimes find it h
+ ard to make space for yourself and find inner silence\, join us for an oppo
+ rtunity in a community where that's the shared goal.<br><br>Be sure to brin
+ g a mat and a blanket or a beach towel and some blankets or some blankets a
+ nd some more blankets... Bring things to be cozy with haha. A pillow and so
+ me tea/ water also help.<br>
+LAST-MODIFIED:20260324T143014Z
+LOCATION:7515 Delwood Rd NW
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Community Sound Bath
+TRANSP:OPAQUE
+END:VEVENT
+
+
+BEGIN:VEVENT
+DTSTART:20260405T000000Z
+DTEND:20260405T000100Z
+DTSTAMP:20260404T181110Z
+UID:n793o0bu1doeapk6e33nv92blo@google.com
+CREATED:20260226T230651Z
+DESCRIPTION:If you're totally new or need a basic refresher\, check this vi
+ deo out:<br><br><a href="https://www.youtube.com/watch?v=CpSewSHZhmo">https
+ ://www.youtube.com/watch?v=CpSewSHZhmo</a><br><br>We will play on <a href="
+ https://pokerpatio.com/">https://pokerpatio.com/</a> No need to pay or regi
+ ster\, only browser required.<br><br>If a beginner friendly intro isn't you
+ r jam and you'd rather go down a rabbit hole- here's the start of a univers
+ ity level lecture series on the science of poker theory: <a href="https://w
+ ww.youtube.com/watch?v=7cAzgUIKI68">https://www.youtube.com/watch?v=7cAzgUI
+ KI68</a><br><br>Link to the table will be shared in VC and general chat.<br
+ ><br>Eventual goal is to have a few regulars and play some home games every
+  month or so.<br>
+LAST-MODIFIED:20260329T143025Z
+LOCATION:vc: 1394757556798488843
+SEQUENCE:5
+STATUS:CONFIRMED
+SUMMARY:Beginner Friendly virtual poker game
+TRANSP:OPAQUE
+END:VEVENT
+
+
+BEGIN:VEVENT
+DTSTART:20260314T164500Z
+DTEND:20260314T190000Z
+DTSTAMP:20260404T181110Z
+UID:5l0i93jei2sn3of158pnp3ld0s@google.com
+CREATED:20260308T143028Z
+DESCRIPTION:Our monthly cleanups are one of the simplest — and most importa
+ nt — things we do.<br><br>They’re not just about tidying streets. They’re a
+ bout showing care for place\, building pride\, and creating low-barrier way
+ s for people to show up for Chinatown together. Cleanups often end with sha
+ red meals and conversations that spark new ideas and relationships.<br><br>
+ Join us:<br>10:45am on the 2nd Saturday of each month<br>Meet at CO*LAB (96
+ 41 102A Ave NW)<br><br>Sponsored by REACH Edmonton<br>
+LAST-MODIFIED:20260309T200033Z
+LOCATION:CO*LAB - Community {Arts} Laboratory 9641 102A Ave NW\, Edmonton\,
+  AB T5H 0G3
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Monthly Chinatown Cleanup
+TRANSP:OPAQUE
+END:VEVENT
+
+
+BEGIN:VEVENT
+DTSTART:20260313T223000Z
+DTEND:20260314T000000Z
+DTSTAMP:20260404T181110Z
+UID:r6c8lnjp58r10ic4j53kd79ij8@google.com
+CREATED:20260307T143033Z
+DESCRIPTION:Calling all Studio Ghibli fans! Let's watch Kiki's Delivery Ser
+ vice on IMAX 👧 🧹<br><br>Where: Scotiabank Theatre Edmonton (WEM)<br>When:
+  Friday\, March 13th\, 2026 4:30 PM showtime<br><br>Looks like this will be
+  in Japanese audio w/ English subs.<br><br>IMAX Ticket Price: \\(23.75 + ta
+ xesI am a Cineclub member so I have the ability to buy 2 more discounted ti
+ ckets for \\)18 + taxes\, FCFS. You can just EMT me.<br><br>Link to purchas
+ e tickets online: <a href="https://www.cineplex.com/movie/subbed-kikis-deli
+ very-service-4k">https://www.cineplex.com/movie/subbed-kikis-delivery-servi
+ ce-4k</a><br>You can also purchase tickets at the theatre.<br><br>This will
+  be a buy your own ticket and food event. We will meet at the theatre lobby
+  before heading inside the ticketed area.<br>
+LAST-MODIFIED:20260307T143043Z
+LOCATION:Scotiabank Theatre Edmonton (West Edmonton Mall)
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Kiki's Delivery Service on IMAX
+TRANSP:OPAQUE
+END:VEVENT
+
+
+BEGIN:VEVENT
+DTSTART:20260409T020000Z
+DTEND:20260409T030000Z
+DTSTAMP:20260404T181110Z
+UID:g8rqnud2jph20ni6i2bkjqcfkg@google.com
+CREATED:20260402T223437Z
+LAST-MODIFIED:20260402T223438Z
+LOCATION:The Common\, 9910 109 St NW
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Jazz Night at The Common
+TRANSP:OPAQUE
+END:VEVENT
+
+
+BEGIN:VEVENT
+DTSTART:20260314T160000Z
+DTEND:20260314T230000Z
+DTSTAMP:20260404T181110Z
+UID:sd4hdmjhvrupiu8hsuh27mc3sc@google.com
+CREATED:20260308T143029Z
+DESCRIPTION:The semi-annual Edmonton Nerd Sale is on Saturday\, March 14. T
+ he focus is on video games\, but there are lots of other cool collectibles
+ present. There are over 60 vendors.<br><br>Admission is free.<br><br>A fun
+ activity for us nerds to meet up and check out the vendors\, and maybe meet
+  other fellow nerds. This is an independently organized event that we will
+ attend as a group.<br><br><a href="https://yegnerdsale.com">https://yegnerd
+ sale.com</a><br><br>Crossposted to: YEG30+/Y3P Discord Group.<br><br>DISCLA
+ IMER: There are no nerds for sale at this event.<br><br><a href="https://di
+ scord.com/channels/1394757556798488839/1466854387769934068">https://discord
+ .com/channels/1394757556798488839/1466854387769934068</a><br>
+LAST-MODIFIED:20260308T143030Z
+LOCATION:Millwoods Town Centre\, 2331 66 St NW\, Edmonton\, AB T6K 4B5
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Edmonton Nerd Sale
+TRANSP:OPAQUE
+END:VEVENT
+
+END:VCALENDAR
+

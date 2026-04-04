@@ -1,11 +1,15 @@
 [package]
-name = "discordcalendarbot"
-version = "0.1.0"
+name = "icalbot"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
 chrono = "0.4.44"
 dotenv = "0.15.0"
-serenity = "0.12.5"
-sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio"] }
-tokio = { version = "1.50.0", features = ["rt-multi-thread"] }
+icalendar = "0.17.9"
+serenity = { version = "0.12.5", features = ["model", "cache"] }
+sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "chrono"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "signal"] }
+
+[build-dependencies]
+chrono = { version = "0.4.44", default-features = false, features = ["now"] }

@@ -1,21 +1,13 @@
 CREATE TABLE IF NOT EXISTS events (
-    [id]               INTEGER PRIMARY KEY,
-    [deleted]          BOOLEAN NOT NULL DEFAULT 0,
-    [discord_event_id] TEXT UNIQUE, -- Discord's event ID, stored as a string to accommodate u64 values
-    [name]             TEXT NOT NULL,
-    [description]      TEXT,
-    [start_time]       TEXT NOT NULL, -- stored as ISO 8601 string
-    [duration_seconds] INTEGER NOT NULL,
-    [location]         TEXT,
-    [created_at]       TEXT DEFAULT (CURRENT_TIMESTAMP),
-    [updated_at]       TEXT DEFAULT (CURRENT_TIMESTAMP)
+    [event_id]    TEXT    NOT NULL UNIQUE     ,
+    [guild_id]    TEXT    NOT NULL            ,
+    [title]       TEXT    NOT NULL            ,
+    [description] TEXT                        ,
+    [location]    TEXT                        ,
+    [deleted]     BOOLEAN NOT NULL DEFAULT 0  ,
+    [sequence]    INTEGER NOT NULL DEFAULT 0  ,
+    [start_time]  TEXT    NOT NULL            ,
+    [end_time]    TEXT    NOT NULL            ,
+    [created_at]  TEXT    NOT NULL            ,
+    [updated_at]  TEXT    NOT NULL
 );
-
-CREATE TRIGGER IF NOT EXISTS events_updated_at
-AFTER UPDATE ON events
-FOR EACH ROW
-BEGIN
-  UPDATE events
-  SET updated_at = CURRENT_TIMESTAMP
-  WHERE id = OLD.id;
-END;

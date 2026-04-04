@@ -1,8 +1,10 @@
-mod calendar_bot;
-mod bot_error;
+mod errors;
+mod entities;
+mod bot;
+mod icalendar;
 
-use crate::calendar_bot::CalendarBot;
 use dotenv::dotenv;
+use crate::bot::CalendarBot;
 
 #[tokio::main]
 async fn main() {
