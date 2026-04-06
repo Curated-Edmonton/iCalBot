@@ -1,74 +1,48 @@
-use std::path::PathBuf;
+use std::sync::Arc;
 
 use serenity::async_trait;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+use tokio::sync::watch;
 
 use crate::entities::*;
 use crate::errors::BotError;
 use crate::icalendar::make_calendar;
+use crate::state::AppState;
+
+struct RefreshResult
+{
+    total_events: i64,
+    past_events: i64,
+    future_events: i64,
+    refreshed_events: u16,
+}
 
 // Define a struct to hold the global state of the bot
 #[allow(unused)]
-pub struct CalendarBot {
+pub struct CalendarBot
+{
     client: Option<Client>,
     pub version: String,
     pub token: String,
-    pub state_directory: PathBuf,
-    pub database_url: String,
-    pub database: sqlx::SqlitePool,
-}
-
-#[cfg(unix)]
-async fn wait_until_shutdown() {
-    use tokio::signal::unix as signal;
-
-    let [mut s1, mut s2, mut s3] = [
-        signal::signal(signal::SignalKind::hangup()).unwrap(),
-        signal::signal(signal::SignalKind::interrupt()).unwrap(),
-        signal::signal(signal::SignalKind::terminate()).unwrap(),
-    ];
-
-    tokio::select!(
-        v = s1.recv() => v.unwrap(),
-        v = s2.recv() => v.unwrap(),
-        v = s3.recv() => v.unwrap(),
-    );
-}
-
-#[cfg(windows)]
-async fn wait_until_shutdown() {
-    let (mut s1, mut s2) = (
-        tokio::signal::windows::ctrl_c().unwrap(),
-        tokio::signal::windows::ctrl_break().unwrap(),
-    );
-
-    tokio::select!(
-        v = s1.recv() => v.unwrap(),
-        v = s2.recv() => v.unwrap(),
-    );
+    pub state: Arc<AppState>,
 }
 
 // And also act as a Type on which to implement Traits
-impl CalendarBot {
+impl CalendarBot
+{
     const BOT_TOKEN_ENV_VAR: &str = "BOT_TOKEN";
-
-    // Either a file path to a SQLite database or a full connection string starting with "sqlite:"
-    const DB_CONNECTION_STRING_ENV_VAR: &str = "DATABASE_URL";
-    const DB_CONNECTION_STRING_DEFAULT_FILENAME: &str = "db.sqlite";
-
-    const STATE_DIRECTORY_ENV_VAR: &str = "BOT_STATE_DIRECTORY";
-    const STATE_DIRECTORY_DEFAULT_VALUE: &str = "icalbot";
 
     const INTENTS: [GatewayIntents; 2] = [
         GatewayIntents::GUILD_SCHEDULED_EVENTS,
         GatewayIntents::MESSAGE_CONTENT,
     ];
 
-    const BOT_COMMAND_PREFIX: &str = "!icalbot ";
+    const BOT_COMMAND_PREFIX: &str = "!icalbot";
 
     // Initialize the bot
-    pub async fn new() -> Result<Self, BotError> {
+    pub async fn new(state: Arc<AppState>) -> Result<Self, BotError>
+    {
         // Set the Version from BUILD_VERSION variable which should be setup by build.rs
         let version = env!("BUILD_VERSION").to_owned();
         println!("Using Version: {}", version);
@@ -84,111 +58,20 @@ impl CalendarBot {
             }
         };
 
-        // Get the State Directory as an absolute path
-        let state_directory = match std::env::var(Self::STATE_DIRECTORY_ENV_VAR) {
-            Ok(dir) => PathBuf::from(&dir),
-            Err(_) => PathBuf::from(Self::STATE_DIRECTORY_DEFAULT_VALUE),
-        };
-
-        // Make sure the state directory exists
-        match std::fs::create_dir_all(&state_directory) {
-            // Directory created successfully
-            Ok(_) => println!("Created new empty state directory."),
-
-            // Directory already exists, no action needed
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),
-
-            // All Other errors
-            Err(e) => {
-                return Err(BotError::new(format!(
-                    "Failed to create state directory: {}",
-                    e
-                )));
-            }
-        }
-
-        // Canonicalize the state directory path
-        let state_directory = match state_directory.canonicalize() {
-            Ok(path) => path,
-            Err(e) => {
-                return Err(BotError::new(format!(
-                    "Failed to get absolute path to state directory: {}",
-                    e
-                )));
-            }
-        };
-
-        println!("Using state directory: {}", state_directory.display());
-
-        // Get the Database Connection String, and configure the database options accordingly
-        let mut database_options =
-            sqlx::sqlite::SqliteConnectOptions::new().create_if_missing(true);
-        let database_url = match std::env::var(Self::DB_CONNECTION_STRING_ENV_VAR) {
-            Ok(url) => match url.strip_prefix("sqlite:") {
-                Some(path) => {
-                    // If the URL starts with "sqlite:", we strip off the prefix and use the remaining part as the file path
-                    database_options = database_options.filename(path);
-                    url
-                }
-                None => {
-                    // If the URL does not start with "sqlite:", take it directly as the file path and prepend "sqlite:" to it
-                    database_options = database_options.filename(url.clone());
-                    format!("sqlite:{}", url)
-                }
-            },
-            Err(std::env::VarError::NotPresent) => {
-                // If the environment variable is not set, use a default file path in the state directory
-                let default_path =
-                    state_directory.join(Self::DB_CONNECTION_STRING_DEFAULT_FILENAME);
-                database_options = database_options.filename(&default_path);
-                format!("sqlite:{}", default_path.display())
-            }
-            Err(e) => {
-                return Err(BotError::new(format!(
-                    "Error while getting environment variable {}: {}",
-                    Self::DB_CONNECTION_STRING_ENV_VAR,
-                    e
-                )));
-            }
-        };
-
-        println!("Using database connection string: {}", database_url);
-
-        // Create a connection pool to the SQLite database using the configured options
-        let database = match sqlx::sqlite::SqlitePoolOptions::new()
-            .connect_with(database_options)
-            .await
-        {
-            Ok(pool) => pool,
-            Err(e) => {
-                return Err(BotError::new(format!(
-                    "Failed to connect to database: {}",
-                    e
-                )));
-            }
-        };
-
-        // Run Migrations
-        if let Err(e) = sqlx::migrate!().run(&database).await {
-            return Err(BotError::new(format!(
-                "Failed to run database migrations: {}",
-                e
-            )));
-        }
-
         // Return the constructed bot
         Ok(CalendarBot {
             client: None,
             version,
             token,
-            state_directory,
-            database_url,
-            database,
+            state,
         })
     }
 
     // Run the bot, this will block until the bot is stopped
-    pub async fn run(self) -> Result<(), BotError> {
+    pub async fn run(self, mut shutdown: watch::Receiver<bool>) -> Result<(), BotError>
+    {
+        println!("Starting Discord Bot.");
+
         // Combine the intents into a single GatewayIntents value
         let mut intents = GatewayIntents::default();
         for intent in Self::INTENTS {
@@ -206,9 +89,13 @@ impl CalendarBot {
 
         let shard_manager = client.shard_manager.clone();
         tokio::spawn(async move {
-            wait_until_shutdown().await;
-            println!("Recieved control C and shutting down.");
-            shard_manager.shutdown_all().await;
+            while shutdown.changed().await.is_ok() {
+                if *shutdown.borrow() {
+                    println!("Shutdown requested. Stopping Discord bot shards.");
+                    shard_manager.shutdown_all().await;
+                    break;
+                }
+            }
         });
 
         // Start the client, this will block until the bot is stopped
@@ -219,14 +106,15 @@ impl CalendarBot {
     }
 
     /// Given a Guild ID, iterate all accessible events and update them in the DB
-    async fn refresh_guild_events(&self, ctx: Context, guild: GuildId) {
-        let guild_id = guild.get().to_string();
-        let guild_name = guild.name(ctx.cache).unwrap_or(guild_id);
+    async fn refresh_guild_events(&self, ctx: Context, guild: GuildId) -> Option<RefreshResult>
+    {
+        let guild_id_str = guild.get().to_string();
+        let guild_name = guild.name(ctx.cache).unwrap_or(guild_id_str.clone());
 
         // Get the list of scheduled events for the guild
         let Ok(guild_events) = guild.scheduled_events(&ctx.http, true).await else {
             println!("Unable to get scheduled events.");
-            return;
+            return None;
         };
 
         if guild_events.len() == 0 {
@@ -234,13 +122,12 @@ impl CalendarBot {
                 "[upsert_guild_events] Guild {} has no visible event history.",
                 guild_name
             );
-            return;
         }
 
         // Refresh each event and count the number of changes
         let mut num_events_different: u16 = 0;
         for mut event in guild_events.iter().map(|e| EventDetails::from(e.clone())) {
-            if event.refresh(&self.database, false).await.unwrap_or(false) {
+            if event.refresh(&self.state.database, false).await.unwrap_or(false) {
                 num_events_different += 1;
             }
         }
@@ -250,87 +137,293 @@ impl CalendarBot {
             guild_name,
             num_events_different,
             guild_events.len()
+        );
+
+        // Query the database for event counts
+        let now = chrono::Utc::now();
+        let total_events: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM events WHERE guild_id = ? AND deleted = 0")
+                .bind(&guild_id_str)
+                .fetch_one(&self.state.database)
+                .await
+                .unwrap_or(0);
+
+        let past_events: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM events WHERE guild_id = ? AND deleted = 0 AND end_time < ?",
         )
+        .bind(&guild_id_str)
+        .bind(now)
+        .fetch_one(&self.state.database)
+        .await
+        .unwrap_or(0);
+
+        let future_events: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM events WHERE guild_id = ? AND deleted = 0 AND start_time >= ?",
+        )
+        .bind(&guild_id_str)
+        .bind(now)
+        .fetch_one(&self.state.database)
+        .await
+        .unwrap_or(0);
+
+        Some(RefreshResult {
+            total_events,
+            past_events,
+            future_events,
+            refreshed_events: num_events_different,
+        })
     }
 }
 
 #[async_trait]
-impl EventHandler for CalendarBot {
-    async fn ready(&self, _ctx: Context, ready: Ready) {
+impl EventHandler for CalendarBot
+{
+    async fn ready(&self, _ctx: Context, ready: Ready)
+    {
         println!("{} is connected and ready!", ready.user.name);
+
+        for guild in &ready.guilds {
+            let guild_info = GuildRecord::from_id(guild.id);
+            if let Some(err) = guild_info.upsert(&self.state.database).await {
+                println!("[ready] Failed to upsert guild {}: {}", guild.id.get(), err);
+            }
+        }
+        println!("[ready] Upserted {} guild(s).", ready.guilds.len());
     }
 
-    async fn guild_create(&self, ctx: Context, guild: Guild, is_new: Option<bool>) {
+    async fn guild_create(&self, ctx: Context, guild: Guild, is_new: Option<bool>)
+    {
         println!(
             "[guild_create] {} ({}) (is_new: {:?})",
             guild.name,
             guild.id.get(),
             is_new
         );
+
+        let guild_info = GuildRecord::from(&guild);
+        if let Some(err) = guild_info.upsert(&self.state.database).await {
+            println!("[guild_create] Failed to upsert guild {}: {}", guild.name, err);
+        }
+
         self.refresh_guild_events(ctx, guild.id).await;
     }
 
-    async fn message(&self, ctx: Context, msg: Message) {
+    async fn message(&self, ctx: Context, msg: Message)
+    {
         let Some(guild_id) = msg.guild_id else {
             // Return early if the message has no guild
             return;
         };
 
+        // Strip the command prefix; the remainder may be empty (bare "!icalbot") or
+        // start with a space followed by the subcommand.
+        let Some(after_prefix) = msg.content.strip_prefix(CalendarBot::BOT_COMMAND_PREFIX) else {
+            return;
+        };
+
+        let cmd = after_prefix.trim();
+
         // Dispatch based on the command
-        match msg.content.strip_prefix(CalendarBot::BOT_COMMAND_PREFIX) {
-            Some("refresh") => self.refresh_guild_events(ctx, guild_id).await,
-            Some("version") => _ = msg.reply_mention(ctx, self.version.clone()).await,
-            Some("dump_calendar") => match make_calendar(guild_id, &ctx, &self.database).await {
+        match cmd {
+            "refresh" => {
+                let reply = match self.refresh_guild_events(ctx.clone(), guild_id).await {
+                    Some(result) => format!(
+                        "**Refresh complete**\n\
+                         Total events: {}\n\
+                         Past events: {}\n\
+                         Future events: {}\n\
+                         Refreshed events: {}",
+                        result.total_events,
+                        result.past_events,
+                        result.future_events,
+                        result.refreshed_events,
+                    ),
+                    None => "Failed to refresh events.".to_string(),
+                };
+                _ = msg.reply_mention(&ctx, reply).await;
+            }
+            "version" => _ = msg.reply_mention(&ctx, self.version.clone()).await,
+
+            // Bare command — show the calendar URL if a discriminator is set.
+            "" => {
+                let gid = guild_id.get().to_string();
+                match GuildRecord::lookup(&gid, &self.state.database).await {
+                    Ok(Some(guild)) => match &guild.discriminator {
+                        Some(disc) => {
+                            let url = self.state.calendar_url(disc);
+                            _ = msg.reply_mention(&ctx, format!("Calendar URL: {}", url)).await;
+                        }
+                        None => {
+                            _ = msg
+                                .reply_mention(
+                                    &ctx,
+                                    "No calendar configured. Use `!icalbot reset` or `!icalbot set <id>` to create one.",
+                                )
+                                .await;
+                        }
+                    },
+                    Ok(None) => {
+                        _ = msg.reply_mention(&ctx, "Guild not found in the database.").await;
+                    }
+                    Err(e) => {
+                        _ = msg
+                            .reply_mention(&ctx, format!("Error looking up guild: {}", e))
+                            .await;
+                    }
+                }
+            }
+
+            // reset — generate a random discriminator
+            "reset" => {
+                let discriminator = GuildRecord::generate_discriminator();
+                let gid = guild_id.get().to_string();
+                match GuildRecord::set_discriminator(&gid, &discriminator, &self.state.database).await {
+                    None => {
+                        let url = self.state.calendar_url(&discriminator);
+                        _ = msg
+                            .reply_mention(
+                                &ctx,
+                                format!(
+                                    "Guild discriminator set to `{}`\nCalendar URL: {}",
+                                    discriminator, url
+                                ),
+                            )
+                            .await;
+                    }
+                    Some(err) => {
+                        _ = msg
+                            .reply_mention(&ctx, format!("Failed to set discriminator: {}", err))
+                            .await;
+                    }
+                }
+            }
+
+            // set <id> — set a user-supplied discriminator
+            _ if cmd == "set" || cmd.starts_with("set ") => {
+                let id = cmd.strip_prefix("set").unwrap().trim();
+                if id.is_empty() {
+                    _ = msg
+                        .reply_mention(&ctx, "Usage: `!icalbot set <id>` — provide an ID to use.")
+                        .await;
+                    return;
+                }
+                if !GuildRecord::is_url_safe(id) {
+                    _ = msg
+                        .reply_mention(
+                            &ctx,
+                            "Invalid ID. The ID must contain only URL-safe characters \
+                             (letters, digits, `-`, `.`, `_`, `~`).",
+                        )
+                        .await;
+                    return;
+                }
+                let gid = guild_id.get().to_string();
+                match GuildRecord::set_discriminator(&gid, id, &self.state.database).await {
+                    None => {
+                        let url = self.state.calendar_url(id);
+                        _ = msg
+                            .reply_mention(
+                                &ctx,
+                                format!("Guild discriminator set to `{}`\nCalendar URL: {}", id, url),
+                            )
+                            .await;
+                    }
+                    Some(err) => {
+                        _ = msg
+                            .reply_mention(&ctx, format!("Failed to set discriminator: {}", err))
+                            .await;
+                    }
+                }
+            }
+
+            // delete — remove the discriminator
+            "delete" => {
+                let gid = guild_id.get().to_string();
+                match GuildRecord::clear_discriminator(&gid, &self.state.database).await {
+                    None => {
+                        _ = msg.reply_mention(&ctx, "Calendar discriminator removed.").await;
+                    }
+                    Some(err) => {
+                        _ = msg
+                            .reply_mention(&ctx, format!("Failed to remove discriminator: {}", err))
+                            .await;
+                    }
+                }
+            }
+
+            "dump_calendar" => match {
+                let name = guild_id.name(&ctx.cache).unwrap_or_default();
+                make_calendar(&guild_id.get().to_string(), &name, &self.state.database).await
+            } {
                 Ok(cal) => {
                     _ = msg
                         .reply_mention(ctx, format!("```plaintext\n{}\n```", cal))
                         .await
                 }
-                Err(e) => _ = msg
-                    .reply_mention(
-                        ctx,
-                        format!(
-                            "I had an error rendering your calendar...\n\n```plaintext\n{}\n```",
-                            e
-                        ),
-                    )
-                    .await,
+                Err(e) => {
+                    _ = msg
+                        .reply_mention(
+                            ctx,
+                            format!(
+                                "I had an error rendering your calendar...\n\n```plaintext\n{}\n```",
+                                e
+                            ),
+                        )
+                        .await
+                }
             },
-            Some(unknown) => println!("Unknown Command: {unknown}"),
-            None => return,
+
+            "help" => {
+                let help_text = "\
+**iCalBot Commands**\n\
+`!icalbot` — Show the calendar URL for this server\n\
+`!icalbot help` — Show this help message\n\
+`!icalbot reset` — Generate a new random calendar ID\n\
+`!icalbot set <id>` — Set a custom calendar ID (URL-safe characters only)\n\
+`!icalbot delete` — Remove the calendar ID (disables the calendar)\n\
+`!icalbot refresh` — Re-sync scheduled events from Discord\n\
+`!icalbot version` — Show the bot version\n\
+`!icalbot dump_calendar` — Print the raw iCalendar output";
+                _ = msg.reply_mention(&ctx, help_text).await;
+            }
+
+            unknown => println!("Unknown Command: {unknown}"),
         }
     }
 
-    async fn guild_scheduled_event_create(&self, ctx: Context, event: ScheduledEvent) {
+    async fn guild_scheduled_event_create(&self, ctx: Context, event: ScheduledEvent)
+    {
         print!(
             "[guild_scheduled_event_create]: {:?}/{} ",
             event.guild_id.name(&ctx.cache),
             event.name
         );
         let event_details: EventDetails = event.into();
-        event_details.create(&self.database).await;
+        event_details.create(&self.state.database).await;
         println!("Success");
     }
 
-    async fn guild_scheduled_event_update(&self, ctx: Context, event: ScheduledEvent) {
+    async fn guild_scheduled_event_update(&self, ctx: Context, event: ScheduledEvent)
+    {
         print!(
             "[guild_scheduled_event_update]: {:?}/{} ",
             event.guild_id.name(&ctx.cache),
             event.name
         );
         let event_details: EventDetails = event.into();
-        event_details.update(&self.database).await;
+        event_details.update(&self.state.database).await;
         println!("Success");
     }
 
-    async fn guild_scheduled_event_delete(&self, ctx: Context, event: ScheduledEvent) {
+    async fn guild_scheduled_event_delete(&self, ctx: Context, event: ScheduledEvent)
+    {
         print!(
             "[guild_scheduled_event_delete]: {:?}/{} ",
             event.guild_id.name(&ctx.cache),
             event.name
         );
         let event_details: EventDetails = event.into();
-        event_details.delete(&self.database).await;
+        event_details.delete(&self.state.database).await;
         println!("Success");
     }
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE guilds SET\n                discriminator = ?,\n                updated_at = ?\n            WHERE guild_id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "4def311fe1b9b08a194a42281cdd5650db1df050ed21bb2e19c97bba82367265"
+}

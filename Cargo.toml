@@ -1,15 +1,33 @@
 [package]
 name = "icalbot"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
+rust-version = "1.85.0"
 
 [dependencies]
+axum = "0.8"
 chrono = "0.4.44"
+rand = "0.9"
 dotenv = "0.15.0"
 icalendar = "0.17.9"
 serenity = { version = "0.12.5", features = ["model", "cache"] }
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "chrono"] }
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "signal"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "signal", "net"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["normalize-path"] }
 
 [build-dependencies]
 chrono = { version = "0.4.44", default-features = false, features = ["now"] }
+
+[profile.release-custom]
+inherits = "release"
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.develop-custom]
+inherits = "dev"
+lto = true
+codegen-units = 1

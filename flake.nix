@@ -63,6 +63,27 @@
             (toolchain: toolchain.default)));
           devShells.stable = (mkDevShell pkgs.rust-bin.stable.latest.default);
           devShells.msrv = (mkDevShell pkgs.rust-bin.stable.${msrv}.default);
+          devShells.musl =
+            let
+              muslCC = pkgs.pkgsCross.musl64.stdenv.cc;
+              rustMusl = pkgs.rust-bin.stable.latest.default.override {
+                targets = [ "x86_64-unknown-linux-musl" ];
+              };
+            in
+            pkgs.mkShell {
+              shellHook = ''
+                export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
+
+                # Load SQLX Completions
+                source <(sqlx completions bash)
+              '';
+              buildInputs = runtimeDeps;
+              nativeBuildInputs = buildDeps ++ devDeps ++ [ rustMusl muslCC ];
+
+              CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "${muslCC}/bin/x86_64-unknown-linux-musl-cc";
+              CC_x86_64_unknown_linux_musl = "${muslCC}/bin/x86_64-unknown-linux-musl-cc";
+              AR_x86_64_unknown_linux_musl = "${muslCC}/bin/x86_64-unknown-linux-musl-ar";
+            };
         };
     };
 }

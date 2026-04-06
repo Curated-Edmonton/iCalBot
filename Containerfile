@@ -20,10 +20,13 @@ RUN cargo build --target x86_64-unknown-linux-musl --release
 # Use the 'scratch' image, which is completely empty.
 FROM scratch
 
-ENV BINNAME="icalbot"
-
 # Copy the compiled binary from the builder stage
+ENV BINNAME="icalbot"
 COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/$BINNAME /bot
+
+# Define a volume for the state directory.
+ENV BOT_STATE_DIRECTORY="/state"
+VOLUME "${BOT_STATE_DIRECTORY}"
 
 # Set the entrypoint for the container
 CMD ["/bot"]
