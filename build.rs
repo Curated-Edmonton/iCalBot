@@ -16,8 +16,7 @@ use std::{env, process::Command};
 
 use chrono::Utc;
 
-fn main()
-{
+fn main() {
     println!("cargo:rerun-if-changed=migrations");
     println!("cargo:rerun-if-changed=build.rs");
     set_build_version();
@@ -25,8 +24,7 @@ fn main()
 
 /// Gets the Git commit hash and dirty status.
 /// Returns `None` if Git is unavailable.
-fn get_git_version() -> Option<String>
-{
+fn get_git_version() -> Option<String> {
     let commit_hash = Command::new("git")
         .args(["rev-parse", "--short=10", "HEAD"])
         .output()
@@ -51,8 +49,7 @@ fn get_git_version() -> Option<String>
 }
 
 /// Gets the Rust toolchain version.
-fn get_rustc_version() -> Option<String>
-{
+fn get_rustc_version() -> Option<String> {
     Command::new("rustc")
         .arg("--version")
         .output()
@@ -62,8 +59,7 @@ fn get_rustc_version() -> Option<String>
 }
 
 /// Sets `BUILD_VERSION`, the single authoritative version string.
-fn set_build_version()
-{
+fn set_build_version() {
     let build_date = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
     let git_version = get_git_version();
     let rustc_version = get_rustc_version();

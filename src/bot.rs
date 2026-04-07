@@ -10,8 +10,7 @@ use crate::errors::BotError;
 use crate::icalendar::make_calendar;
 use crate::state::AppState;
 
-struct RefreshResult
-{
+struct RefreshResult {
     total_events: i64,
     past_events: i64,
     future_events: i64,
@@ -20,8 +19,7 @@ struct RefreshResult
 
 // Define a struct to hold the global state of the bot
 #[allow(unused)]
-pub struct CalendarBot
-{
+pub struct CalendarBot {
     client: Option<Client>,
     pub version: String,
     pub token: String,
@@ -29,8 +27,7 @@ pub struct CalendarBot
 }
 
 // And also act as a Type on which to implement Traits
-impl CalendarBot
-{
+impl CalendarBot {
     const BOT_TOKEN_ENV_VAR: &str = "BOT_TOKEN";
 
     const INTENTS: [GatewayIntents; 2] = [
@@ -41,8 +38,7 @@ impl CalendarBot
     const BOT_COMMAND_PREFIX: &str = "!icalbot";
 
     // Initialize the bot
-    pub async fn new(state: Arc<AppState>) -> Result<Self, BotError>
-    {
+    pub async fn new(state: Arc<AppState>) -> Result<Self, BotError> {
         // Set the Version from BUILD_VERSION variable which should be setup by build.rs
         let version = env!("BUILD_VERSION").to_owned();
         println!("Using Version: {}", version);
@@ -68,8 +64,7 @@ impl CalendarBot
     }
 
     // Run the bot, this will block until the bot is stopped
-    pub async fn run(self, mut shutdown: watch::Receiver<bool>) -> Result<(), BotError>
-    {
+    pub async fn run(self, mut shutdown: watch::Receiver<bool>) -> Result<(), BotError> {
         println!("Starting Discord Bot.");
 
         // Combine the intents into a single GatewayIntents value
@@ -106,8 +101,7 @@ impl CalendarBot
     }
 
     /// Given a Guild ID, iterate all accessible events and update them in the DB
-    async fn refresh_guild_events(&self, ctx: Context, guild: GuildId) -> Option<RefreshResult>
-    {
+    async fn refresh_guild_events(&self, ctx: Context, guild: GuildId) -> Option<RefreshResult> {
         let guild_id_str = guild.get().to_string();
         let guild_name = guild.name(ctx.cache).unwrap_or(guild_id_str.clone());
 
@@ -176,10 +170,8 @@ impl CalendarBot
 }
 
 #[async_trait]
-impl EventHandler for CalendarBot
-{
-    async fn ready(&self, _ctx: Context, ready: Ready)
-    {
+impl EventHandler for CalendarBot {
+    async fn ready(&self, _ctx: Context, ready: Ready) {
         println!("{} is connected and ready!", ready.user.name);
 
         for guild in &ready.guilds {
@@ -191,8 +183,7 @@ impl EventHandler for CalendarBot
         println!("[ready] Upserted {} guild(s).", ready.guilds.len());
     }
 
-    async fn guild_create(&self, ctx: Context, guild: Guild, is_new: Option<bool>)
-    {
+    async fn guild_create(&self, ctx: Context, guild: Guild, is_new: Option<bool>) {
         println!(
             "[guild_create] {} ({}) (is_new: {:?})",
             guild.name,
@@ -208,8 +199,7 @@ impl EventHandler for CalendarBot
         self.refresh_guild_events(ctx, guild.id).await;
     }
 
-    async fn message(&self, ctx: Context, msg: Message)
-    {
+    async fn message(&self, ctx: Context, msg: Message) {
         let Some(guild_id) = msg.guild_id else {
             // Return early if the message has no guild
             return;
@@ -391,8 +381,7 @@ impl EventHandler for CalendarBot
         }
     }
 
-    async fn guild_scheduled_event_create(&self, ctx: Context, event: ScheduledEvent)
-    {
+    async fn guild_scheduled_event_create(&self, ctx: Context, event: ScheduledEvent) {
         print!(
             "[guild_scheduled_event_create]: {:?}/{} ",
             event.guild_id.name(&ctx.cache),
@@ -403,8 +392,7 @@ impl EventHandler for CalendarBot
         println!("Success");
     }
 
-    async fn guild_scheduled_event_update(&self, ctx: Context, event: ScheduledEvent)
-    {
+    async fn guild_scheduled_event_update(&self, ctx: Context, event: ScheduledEvent) {
         print!(
             "[guild_scheduled_event_update]: {:?}/{} ",
             event.guild_id.name(&ctx.cache),
@@ -415,8 +403,7 @@ impl EventHandler for CalendarBot
         println!("Success");
     }
 
-    async fn guild_scheduled_event_delete(&self, ctx: Context, event: ScheduledEvent)
-    {
+    async fn guild_scheduled_event_delete(&self, ctx: Context, event: ScheduledEvent) {
         print!(
             "[guild_scheduled_event_delete]: {:?}/{} ",
             event.guild_id.name(&ctx.cache),

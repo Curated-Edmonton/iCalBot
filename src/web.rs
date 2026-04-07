@@ -14,27 +14,21 @@ use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 
 use crate::{entities::GuildRecord, icalendar::make_calendar, state::AppState};
 
-
 #[derive(Debug)]
-pub struct WebServerError
-{
+pub struct WebServerError {
     message: String,
 }
 
 impl Error for WebServerError {}
 
-impl Display for WebServerError
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
-    {
+impl Display for WebServerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Web Error: {}", self.message)
     }
 }
 
-impl From<io::Error> for WebServerError
-{
-    fn from(value: io::Error) -> Self
-    {
+impl From<io::Error> for WebServerError {
+    fn from(value: io::Error) -> Self {
         Self {
             message: format!("IO Error: {}", value),
         }
@@ -43,8 +37,7 @@ impl From<io::Error> for WebServerError
 
 /// GET /health
 /// Runs a SELECT query to verify database connectivity.
-async fn health_check(State(state): State<Arc<AppState>>) -> (StatusCode, String)
-{
+async fn health_check(State(state): State<Arc<AppState>>) -> (StatusCode, String) {
     match sqlx::query("SELECT 1").execute(&state.database).await {
         Ok(_) => (StatusCode::OK, "OK".to_string()),
         Err(e) => {
@@ -56,8 +49,7 @@ async fn health_check(State(state): State<Arc<AppState>>) -> (StatusCode, String
 
 /// GET / and GET /index.html
 /// Responds with a simple HTML page that includes the version of the bot.
-async fn hello_world() -> Html<String>
-{
+async fn hello_world() -> Html<String> {
     let version = env!("BUILD_VERSION");
     Html(format!(
         "<!DOCTYPE html><html><head><title>iCalBot</title></head>\
@@ -70,8 +62,7 @@ async fn hello_world() -> Html<String>
 async fn ical_service(
     State(state): State<Arc<AppState>>,
     Path(calendar_discriminator): Path<String>,
-) -> Response
-{
+) -> Response {
     // Look up the guild by its discriminator
     let guild: Option<GuildRecord> = match sqlx::query_as("SELECT * FROM guilds WHERE discriminator = ?")
         .bind(&calendar_discriminator)
@@ -113,8 +104,7 @@ async fn ical_service(
 pub async fn listen_and_serve(
     state: Arc<AppState>,
     mut shutdown: watch::Receiver<bool>,
-) -> Result<(), WebServerError>
-{
+) -> Result<(), WebServerError> {
     let listen_address = state.listen_address();
     let base_url = state.base_url.clone();
 

@@ -11,8 +11,7 @@ use std::time::Duration;
 use tokio::{sync::watch, task::JoinSet};
 
 #[tokio::main]
-async fn main()
-{
+async fn main() {
     // Load environment variables from a .env file, if it exists
     dotenv().ok();
 

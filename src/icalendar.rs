@@ -7,8 +7,7 @@ pub async fn make_calendar(
     guild_id: &str,
     guild_name: &str,
     db: &sqlx::SqlitePool,
-) -> Result<Calendar, BotError>
-{
+) -> Result<Calendar, BotError> {
     let mut result = Calendar::new();
 
     // Mark this calendar as published (read-only subscription)

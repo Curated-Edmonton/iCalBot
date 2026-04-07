@@ -2,16 +2,14 @@ use std::path::PathBuf;
 
 use crate::errors::BotError;
 
-pub struct AppState
-{
+pub struct AppState {
     pub state_directory: PathBuf,
     pub database_url: String,
     pub database: sqlx::SqlitePool,
     pub base_url: String,
 }
 
-impl AppState
-{
+impl AppState {
     const DB_CONNECTION_STRING_ENV_VAR: &str = "DATABASE_URL";
     const DB_CONNECTION_STRING_DEFAULT_FILENAME: &str = "db.sqlite";
 
@@ -26,8 +24,7 @@ impl AppState
 
     const WEB_SERVER_BASE_URL_ENV_VAR: &str = "WEB_SERVER_BASE_URL";
 
-    pub async fn new() -> Result<Self, BotError>
-    {
+    pub async fn new() -> Result<Self, BotError> {
         // Get the State Directory as an absolute path
         let state_directory = match std::env::var(Self::STATE_DIRECTORY_ENV_VAR) {
             Ok(dir) => PathBuf::from(&dir),
@@ -129,8 +126,7 @@ impl AppState
     }
 
     /// Return the listen address (host:port) derived from environment or defaults.
-    pub fn listen_address(&self) -> String
-    {
+    pub fn listen_address(&self) -> String {
         let listen_host = std::env::var(Self::LISTEN_ADDRESS_ENV_VAR)
             .unwrap_or_else(|_| Self::LISTEN_ADDRESS_DEFAULT.into());
         let listen_port =
@@ -139,8 +135,7 @@ impl AppState
     }
 
     /// Build the full calendar URL for a guild given its discriminator.
-    pub fn calendar_url(&self, discriminator: &str) -> String
-    {
+    pub fn calendar_url(&self, discriminator: &str) -> String {
         format!("{}/ical/{}/ical.ics", self.base_url, discriminator)
     }
 }
