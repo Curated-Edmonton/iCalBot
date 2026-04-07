@@ -36,4 +36,4 @@ jobs:
         with:
           target: x86_64-unknown-linux-musl
 
-      - run: cargo build --verbose --profile release-custom --target x86_64-unknown-linux-musl
+      - run: cargo build --verbose --target x86_64-unknown-linux-musl
